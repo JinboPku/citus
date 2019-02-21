@@ -23,6 +23,7 @@
 #include "access/heapam.h"
 #include "access/nbtree.h"
 #include "access/skey.h"
+#include "access/xact.h"
 #include "access/xlog.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_operator.h"
@@ -174,6 +175,7 @@ static List * GreedyAssignTaskList(List *taskList);
 static Task * GreedyAssignTask(WorkerNode *workerNode, List *taskList,
 							   List *activeShardPlacementLists);
 static List * RoundRobinReorder(Task *task, List *placementList);
+static List * RoundRobinPerTransactionReorder(Task *task, List *placementList);
 static List * ReorderAndAssignTaskList(List *taskList,
 									   List * (*reorderFunction)(Task *, List *));
 static int CompareTasksByShardId(const void *leftElement, const void *rightElement);
@@ -5072,7 +5074,6 @@ RoundRobinAssignTaskList(List *taskList)
 	return taskList;
 }
 
-
 /*
  * RoundRobinReorder implements the core of the round-robin assignment policy.
  * It takes a task and placement list and rotates a copy of the placement list
@@ -5089,6 +5090,34 @@ RoundRobinReorder(Task *task, List *placementList)
 
 	return placementList;
 }
+
+
+
+List *
+RoundRobinPerTransactionAssignTaskList(List *taskList)
+{
+	taskList = ReorderAndAssignTaskList(taskList, RoundRobinPerTransactionReorder);
+
+	return taskList;
+}
+
+/*
+ * RoundRobinPerTransactionReorder implements the core of the round-robin assignment policy.
+ * It takes a task and placement list and rotates a copy of the placement list
+ * based on the task's jobId. The rotated copy is returned.
+ */
+static List *
+RoundRobinPerTransactionReorder(Task *task, List *placementList)
+{
+	TransactionId transactionId = GetStableLatestTransactionId();
+	uint32 activePlacementCount = list_length(placementList);
+	uint32 roundRobinIndex = (transactionId % activePlacementCount);
+
+	placementList = LeftRotateList(placementList, roundRobinIndex);
+
+	return placementList;
+}
+
 
 
 /*

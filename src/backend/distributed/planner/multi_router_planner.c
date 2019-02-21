@@ -1680,6 +1680,10 @@ ReorderTaskPlacementsByTaskAssignmentPolicy(Job *job, TaskAssignmentPolicyType
 	{
 		job->taskList = RoundRobinAssignTaskList(job->taskList);
 	}
+	else if (taskAssignmentPolicy == TASK_ASSIGNMENT_ROUND_ROBIN_PER_TRANSACTION)
+	{
+		job->taskList = RoundRobinPerTransactionAssignTaskList(job->taskList);
+	}
 }
 
 

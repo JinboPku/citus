@@ -817,6 +817,9 @@ AssignDistributedTransactionId(void)
 }
 
 
+
+
+
 /*
  * MarkCitusInitiatedCoordinatorBackend sets that coordinator backend is
  * initiated by Citus.
